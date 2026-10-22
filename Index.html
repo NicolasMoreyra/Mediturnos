@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediTurnos • Sistema de Gestión Médica</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155',
+                            text: '#f8fafc',
+                            muted: '#94a3b8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-dark-bg text-dark-text min-h-screen flex flex-col font-sans transition-colors duration-300">
+
+    <!-- Header -->
+    <header class="bg-dark-card border-b border-dark-border sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg shadow-blue-500/30">
+                    <i data-lucide="stethoscope" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">MediTurnos Pro</h1>
+                    <p class="text-xs text-dark-muted">Sistema Integral de Turnos Médicos</p>
+                </div>
+            </div>
+
+            <!-- Navegación de Vistas -->
+            <div class="flex bg-dark-bg p-1.5 rounded-xl border border-dark-border gap-1">
+                <button onclick="switchView('public')" id="btn-public" class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-blue-600 text-white shadow">
+                    <i data-lucide="users" class="w-4 h-4"></i> Pacientes
+                </button>
+                <button onclick="switchView('private')" id="btn-private" class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-dark-muted hover:text-white">
+                    <i data-lucide="lock" class="w-4 h-4"></i> Panel Privado
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6">
+
+        <!-- ================= VISTA PÚBLICA ================= -->
+        <div id="view-public" class="space-y-8">
+            <div class="text-center max-w-2xl mx-auto space-y-2">
+                <h2 class="text-3xl font-extrabold tracking-tight">Reserva tu Turno Médico</h2>
+                <p class="text-dark-muted text-sm sm:text-base">Seleccioná la especialidad, el profesional y elegí el horario disponible de manera rápida y segura.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Formulario de Turno -->
+                <div class="lg:col-span-2 bg-dark-card border border-dark-border p-6 rounded-2xl shadow-xl">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2 border-b border-dark-border pb-3">
+                        <i data-lucide="calendar-plus" class="w-5 h-5 text-blue-500"></i> Formulario de Solicitud
+                    </h3>
+
+                    <form id="appointment-form" onsubmit="handleAppointmentSubmit(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-dark-muted mb-1">Nombre Completo</label>
+                                <input type="text" id="patient-name" required class="w-full bg-dark-bg border border-dark-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors" placeholder="Ej: Juan Pérez">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-dark-muted mb-1">DNI</label>
+                                <input type="text" id="patient-dni" required class="w-full bg-dark-bg border border-dark-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors" placeholder="Ej: 40123456">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-dark-muted mb-1">Teléfono / WhatsApp</label>
+                                <input type="tel" id="patient-phone" required class="w-full bg-dark-bg border border-dark-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors" placeholder="Ej: 3416123456">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-dark-muted mb-1">Especialidad / Médico</label>
+                                <select id="doctor-select" required onchange="updateAvailableSlots()" class="w-full bg-dark-bg border border-dark-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors">
+                                    <option value="">Seleccione un médico</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-dark-muted mb-1">Fecha del Turno</label>
+                            <input type="date" id="appointment-date" required onchange="updateAvailableSlots()" class="w-full bg-dark-bg border border-dark-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors">
+                        </div>
+
+                        <!-- Selector de Horarios Disponibles -->
+                        <div>
+                            <label class="block text-xs font-medium text-dark-muted mb-2">Horarios Disponibles</label>
+                            <div id="slots-container" class="grid grid-cols-3 sm:grid-cols-4 gap-2.5 p-3 bg-dark-bg border border-dark-border rounded-xl max-h-48 overflow-y-auto">
+                                <p class="col-span-full text-center text-xs text-dark-muted py-4">Seleccioná un médico y una fecha para ver los horarios.</p>
+                            </div>
+                            <input type="hidden" id="selected-time" required>
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-5 h-5"></i> Confirmar Turno
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Sección lateral: Mis Turnos (Buscador por DNI) -->
+                <div class="bg-dark-card border border-dark-border p-6 rounded-2xl shadow-xl flex flex-col">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2 border-b border-dark-border pb-3">
+                        <i data-lucide="search" class="w-5 h-5 text-blue-500"></i> Consultar mis Turnos
+                    </h3>
+                    <p class="text-xs text-dark-muted mb-4">Ingresá tu DNI para ver tus turnos activos o cancelarlos.</p>
+                    
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="search-dni" placeholder="Ingresar DNI..." class="w-full bg-dark-bg border border-dark-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                        <button onclick="searchPatientAppointments()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-xl text-sm font-medium transition-colors">Buscar</button>
+                    </div>
+
+                    <div id="patient-appointments-list" class="space-y-3 flex-grow overflow-y-auto max-h-80">
+                        <p class="text-center text-xs text-dark-muted py-8">No hay búsqueda activa.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= VISTA PRIVADA ================= -->
+        <div id="view-private" class="hidden space-y-6">
+            <!-- Pantalla de Login -->
+            <div id="login-container" class="max-w-md mx-auto bg-dark-card border border-dark-border p-8 rounded-2xl shadow-2xl mt-12 text-center space-y-6">
+                <div class="bg-blue-600/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-blue-500 border border-blue-500/20">
+                    <i data-lucide="lock" class="w-8 h-8"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold">Acceso Restringido</h3>
+                    <p class="text-xs text-dark-muted mt-1">Panel exclusivo para Secretaría y Médicos</p>
+                </div>
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <input type="password" id="access-password" placeholder="Contraseña de acceso" required class="w-full bg-dark-bg border border-dark-border rounded-xl px-4 py-3 text-sm text-center tracking-widest focus:outline-none focus:border-blue-500">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg shadow-blue-600/25">Ingresar al Panel</button>
+                </form>
+            </div>
+
+            <!-- Dashboard Privado (Oculto hasta login correcto) -->
+            <div id="dashboard-container" class="hidden space-y-6">
+                <!-- Cabecera del Dashboard y Acciones -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-dark-card border border-dark-border p-5 rounded-2xl">
+                    <div>
+                        <h2 class="text-2xl font-bold">Panel de Control General</h2>
+                        <p class="text-xs text-dark-muted">Gestión de agenda, estados y configuración de profesionales.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 shadow">
+                            <i data-lucide="download" class="w-4 h-4"></i> Exportar Turnos (CSV)
+                        </button>
+                        <button onclick="openDoctorModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 shadow">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i> Gestionar Médicos
+                        </button>
+                        <button onclick="handleLogout()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 border border-rose-500/30">
+                            <i data-lucide="log-out" class="w-4 h-4"></i> Cerrar Sesión
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tarjetas de Estadísticas -->
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div class="bg-dark-card border border-dark-border p-4 rounded-xl">
+                        <p class="text-xs text-dark-muted">Total de Turnos</p>
+                        <h4 id="stat-total" class="text-2xl font-bold mt-1">0</h4>
+                    </div>
+                    <div class="bg-dark-card border border-dark-border p-4 rounded-xl">
+                        <p class="text-xs text-dark-muted">Pendientes</p>
+                        <h4 id="stat-pending" class="text-2xl font-bold mt-1 text-amber-400">0</h4>
+                    </div>
+                    <div class="bg-dark-card border border-dark-border p-4 rounded-xl">
+                        <p class="text-xs text-dark-muted">Atendidos</p>
+                        <h4 id="stat-attended" class="text-2xl font-bold mt-1 text-emerald-400">0</h4>
+                    </div>
+                    <div class="bg-dark-card border border-dark-border p-4 rounded-xl">
+                        <p class="text-xs text-dark-muted">Cancelados</p>
+                        <h4 id="stat-cancelled" class="text-2xl font-bold mt-1 text-rose-400">0</h4>
+                    </div>
+                </div>
+
+                <!-- Filtros de la Tabla -->
+                <div class="bg-dark-card border border-dark-border p-4 rounded-xl flex flex-wrap gap-4 items-center justify-between">
+                    <div class="flex flex-wrap gap-3 items-center w-full sm:w-auto">
+                        <input type="date" id="filter-date" onchange="renderAppointmentsTable()" class="bg-dark-bg border border-dark-border rounded-xl px-3 py-2 text-sm text-dark-text">
+                        <select id="filter-doctor" onchange="renderAppointmentsTable()" class="bg-dark-bg border border-dark-border rounded-xl px-3 py-2 text-sm text-dark-text">
+                            <option value="">Todos los médicos</option>
+                        </select>
+                        <select id="filter-status" onchange="renderAppointmentsTable()" class="bg-dark-bg border border-dark-border rounded-xl px-3 py-2 text-sm text-dark-text">
+                            <option value="">Todos los estados</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En espera">En espera</option>
+                            <option value="Atendido">Atendido</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                    <button onclick="resetFilters()" class="text-xs text-dark-muted hover:text-white underline">Limpiar filtros</button>
+                </div>
+
+                <!-- Tabla de Turnos -->
+                <div class="bg-dark-card border border-dark-border rounded-2xl overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-dark-bg border-b border-dark-border text-xs text-dark-muted uppercase tracking-wider">
+                                    <th class="p-4">Fecha y Hora</th>
+                                    <th class="p-4">Paciente</th>
+                                    <th class="p-4">DNI / Tel</th>
+                                    <th class="p-4">Médico / Especialidad</th>
+                                    <th class="p-4">Estado</th>
+                                    <th class="p-4 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointments-table-body" class="divide-y divide-dark-border text-sm">
+                                <!-- Inyectado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Gestión de Médicos (ABM) -->
+    <div id="doctor-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-dark-card border border-dark-border w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-dark-border pb-4">
+                <h3 class="text-lg font-bold">Gestión de Médicos y Especialidades</h3>
+                <button onclick="closeDoctorModal()" class="text-dark-muted hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <!-- Formulario nuevo médico -->
+            <form onsubmit="handleAddDoctor(event)" class="space-y-4 bg-dark-bg p-4 rounded-xl border border-dark-border">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-blue-400">Agregar Nuevo Profesional</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input type="text" id="new-doc-name" placeholder="Nombre (ej: Dr. Roberto Gómez)" required class="bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-sm text-dark-text">
+                    <input type="text" id="new-doc-spec" placeholder="Especialidad (ej: Cardiología)" required class="bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-sm text-dark-text">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-xl text-sm transition-colors">Guardar Médico</button>
+            </form>
+
+            <!-- Lista de médicos actuales -->
+            <div class="space-y-2">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-dark-muted">Médicos Activos</h4>
+                <div id="doctors-list-modal" class="space-y-2 max-h-48 overflow-y-auto">
+                    <!-- Inyectado por JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de la Aplicación -->
+    <script>
+        const defaultDoctors = [
+            { id: 1, name: "Dr. Roberto Gómez", specialty: "Cardiología" },
+            { id: 2, name: "Dra. María Elena Sosa", specialty: "Pediatría" },
+            { id: 3, name: "Dr. Carlos Alberto Pérez", specialty: "Clínica Médica" }
+        ];
+
+        let doctors = JSON.parse(localStorage.getItem('mediturnos_doctors')) || defaultDoctors;
+        let appointments = JSON.parse(localStorage.getItem('mediturnos_appointments')) || [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('appointment-date').min = today;
+            document.getElementById('filter-date').value = today;
+            updateDoctorSelects();
+
+            // Sincronización en tiempo real sin recargar
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'mediturnos_appointments') {
+                    appointments = JSON.parse(e.newValue) || [];
+                    if (!document.getElementById('dashboard-container').classList.contains('hidden')) {
+                        renderAppointmentsTable();
+                    }
+                }
+                if (e.key === 'mediturnos_doctors') {
+                    doctors = JSON.parse(e.newValue) || defaultDoctors;
+                    updateDoctorSelects();
+                    if(!document.getElementById('doctor-modal').classList.contains('hidden')) {
+                        renderDoctorsModalList();
+                    }
+                }
+            });
+        });
+
+        function saveAppointments() {
+            localStorage.setItem('mediturnos_appointments', JSON.stringify(appointments));
+            if (!document.getElementById('dashboard-container').classList.contains('hidden')) {
+                renderAppointmentsTable();
+            }
+        }
+
+        function switchView(view) {
+            const pubView = document.getElementById('view-public');
+            const privView = document.getElementById('view-private');
+            const btnPub = document.getElementById('btn-public');
+            const btnPriv = document.getElementById('btn-private');
+
+            if (view === 'public') {
+                pubView.classList.remove('hidden');
+                privView.classList.add('hidden');
+                btnPub.className = "px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-blue-600 text-white shadow";
+                btnPriv.className = "px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-dark-muted hover:text-white";
+            } else {
+                pubView.classList.add('hidden');
+                privView.classList.remove('hidden');
+                btnPriv.className = "px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-blue-600 text-white shadow";
+                btnPub.className = "px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-dark-muted hover:text-white";
+                renderAppointmentsTable();
+            }
+        }
+
+        function updateDoctorSelects() {
+            const docSelect = document.getElementById('doctor-select');
+            const filterDoc = document.getElementById('filter-doctor');
+
+            docSelect.innerHTML = '<option value="">Seleccione un médico</option>';
+            filterDoc.innerHTML = '<option value="">Todos los médicos</option>';
+
+            doctors.forEach(doc => {
+                const label = `${doc.name} (${doc.specialty})`;
+                docSelect.innerHTML += `<option value="${doc.name}">${label}</option>`;
+                filterDoc.innerHTML += `<option value="${doc.name}">${doc.name}</option>`;
+            });
+        }
+
+        function updateAvailableSlots() {
+            const doctor = document.getElementById('doctor-select').value;
+            const date = document.getElementById('appointment-date').value;
+            const container = document.getElementById('slots-container');
+            const selectedTimeInput = document.getElementById('selected-time');
+
+            selectedTimeInput.value = '';
+            container.innerHTML = '';
+
+            if (!doctor || !date) {
+                container.innerHTML = '<p class="col-span-full text-center text-xs text-dark-muted py-4">Seleccioná un médico y una fecha para ver los horarios.</p>';
+                return;
+            }
+
+            const slots = [];
+            for (let hour = 8; hour < 17; hour++) {
+                for (let min = 0; min < 60; min += 30) {
+                    const timeStr = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+                    slots.push(timeStr);
+                }
+            }
+
+            const bookedTimes = appointments
+                .filter(app => app.doctor === doctor && app.date === date && app.status !== 'Cancelado')
+                .map(app => app.time);
+
+            slots.forEach(time => {
+                const isBooked = bookedTimes.includes(time);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = time;
+
+                if (isBooked) {
+                    btn.className = "py-2 px-3 rounded-xl text-xs font-medium bg-dark-bg text-dark-muted border border-dark-border opacity-50 cursor-not-allowed";
+                    btn.disabled = true;
+                } else {
+                    btn.className = "py-2 px-3 rounded-xl text-xs font-medium bg-dark-card border border-dark-border hover:border-blue-500 hover:text-blue-400 transition-all";
+                    btn.onclick = () => {
+                        document.querySelectorAll('#slots-container button').forEach(b => b.classList.remove('bg-blue-600', 'text-white', 'border-blue-500'));
+                        btn.className = "py-2 px-3 rounded-xl text-xs font-medium bg-blue-600 text-white border border-blue-500 shadow";
+                        selectedTimeInput.value = time;
+                    };
+                }
+                container.appendChild(btn);
+            });
+        }
+
+        function handleAppointmentSubmit(event) {
+            event.preventDefault();
+            const name = document.getElementById('patient-name').value;
+            const dni = document.getElementById('patient-dni').value;
+            const phone = document.getElementById('patient-phone').value;
+            const doctor = document.getElementById('doctor-select').value;
+            const date = document.getElementById('appointment-date').value;
+            const time = document.getElementById('selected-time').value;
+
+            if (!time) {
+                alert('Por favor, seleccioná un horario disponible.');
+                return;
+            }
+
+            const newAppointment = {
+                id: Date.now(),
+                name,
+                dni,
+                phone,
+                doctor,
+                date,
+                time,
+                status: 'Pendiente'
+            };
+
+            appointments.push(newAppointment);
+            saveAppointments();
+
+            alert(`¡Turno reservado con éxito!\n\nFecha: ${date} a las ${time}\nMédico: ${doctor}`);
+            
+            const waMsg = encodeURIComponent(`Hola ${name}, te confirmamos tu turno médico con ${doctor} para el día ${date} a las ${time}. ¡Te esperamos!`);
+            if (confirm('¿Deseas enviar la confirmación por WhatsApp?')) {
+                window.open(`https://wa.me/54${phone}?text=${waMsg}`, '_blank');
+            }
+
+            document.getElementById('appointment-form').reset();
+            document.getElementById('slots-container').innerHTML = '<p class="col-span-full text-center text-xs text-dark-muted py-4">Seleccioná un médico y una fecha para ver los horarios.</p>';
+            if(document.getElementById('search-dni').value === dni) searchPatientAppointments();
+        }
+
+        function searchPatientAppointments() {
+            const dni = document.getElementById('search-dni').value.trim();
+            const listContainer = document.getElementById('patient-appointments-list');
+            listContainer.innerHTML = '';
+
+            if (!dni) {
+                listContainer.innerHTML = '<p class="text-center text-xs text-dark-muted py-4">Ingresá un DNI válido.</p>';
+                return;
+            }
+
+            const userAppointments = appointments.filter(app => app.dni === dni);
+
+            if (userAppointments.length === 0) {
+                listContainer.innerHTML = '<p class="text-center text-xs text-dark-muted py-4">No se encontraron turnos para este DNI.</p>';
+                return;
+            }
+
+            userAppointments.forEach(app => {
+                const div = document.createElement('div');
+                div.className = "bg-dark-bg border border-dark-border p-3 rounded-xl text-xs space-y-2";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold text-blue-400">${app.doctor}</span>
+                        <span class="px-2 py-0.5 rounded-full font-medium ${getStatusBadgeClass(app.status)}">${app.status}</span>
+                    </div>
+                    <p class="text-dark-muted">📅 ${app.date} - ⏰ ${app.time}</p>
+                    ${app.status !== 'Cancelado' ? `<button onclick="cancelPatientAppointment(${app.id})" class="w-full bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white py-1.5 rounded-lg transition-colors font-medium">Cancelar Turno</button>` : ''}
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
+        function cancelPatientAppointment(id) {
+            if (confirm('¿Estás seguro de que deseas cancelar este turno?')) {
+                appointments = appointments.map(app => app.id === id ? {...app, status: 'Cancelado'} : app);
+                saveAppointments();
+                searchPatientAppointments();
+                updateAvailableSlots();
+                alert('Turno cancelado correctamente.');
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const pass = document.getElementById('access-password').value;
+            if (pass === '12345') {
+                document.getElementById('login-container').classList.add('hidden');
+                document.getElementById('dashboard-container').classList.remove('hidden');
+                renderAppointmentsTable();
+            } else {
+                alert('Contraseña incorrecta. (Clave: 12345)');
+            }
+        }
+
+        function handleLogout() {
+            document.getElementById('login-container').classList.remove('hidden');
+            document.getElementById('dashboard-container').classList.add('hidden');
+            document.getElementById('access-password').value = '';
+        }
+
+        function renderAppointmentsTable() {
+            const tbody = document.getElementById('appointments-table-body');
+            const filterDate = document.getElementById('filter-date').value;
+            const filterDoctor = document.getElementById('filter-doctor').value;
+            const filterStatus = document.getElementById('filter-status').value;
+
+            tbody.innerHTML = '';
+
+            let filtered = appointments.filter(app => {
+                let match = true;
+                if (filterDate && app.date !== filterDate) match = false;
+                if (filterDoctor && app.doctor !== filterDoctor) match = false;
+                if (filterStatus && app.status !== filterStatus) match = false;
+                return match;
+            });
+
+            document.getElementById('stat-total').textContent = appointments.length;
+            document.getElementById('stat-pending').textContent = appointments.filter(a => a.status === 'Pendiente').length;
+            document.getElementById('stat-attended').textContent = appointments.filter(a => a.status === 'Atendido').length;
+            document.getElementById('stat-cancelled').textContent = appointments.filter(a => a.status === 'Cancelado').length;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-dark-muted">No hay turnos registrados con los filtros seleccionados.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(app => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-dark-bg/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-4 font-medium">${app.date}<br><span class="text-xs text-dark-muted">${app.time} hs</span></td>
+                    <td class="p-4 font-semibold">${app.name}</td>
+                    <td class="p-4 text-xs text-dark-muted">DNI: ${app.dni}<br>Tel: ${app.phone}</td>
+                    <td class="p-4">${app.doctor}</td>
+                    <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(app.status)}">${app.status}</span></td>
+                    <td class="p-4 text-center">
+                        <div class="flex justify-center gap-1">
+                            <select onchange="updateAppointmentStatus(${app.id}, this.value)" class="bg-dark-bg border border-dark-border rounded-lg px-2 py-1 text-xs text-dark-text">
+                                <option value="" disabled selected>Cambiar estado</option>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="En espera">En espera</option>
+                                <option value="Atendido">Atendido</option>
+                                <option value="Cancelado">Cancelado</option>
+                            </select>
+                            <button onclick="deleteAppointment(${app.id})" class="p-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded-lg transition-colors" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        function getStatusBadgeClass(status) {
+            switch(status) {
+                case 'Pendiente': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+                case 'En espera': return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+                case 'Atendido': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                case 'Cancelado': return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                default: return 'bg-slate-500/10 text-slate-400';
+            }
+        }
+
+        function updateAppointmentStatus(id, newStatus) {
+            appointments = appointments.map(app => app.id === id ? {...app, status: newStatus} : app);
+            saveAppointments();
+            updateAvailableSlots();
+        }
+
+        function deleteAppointment(id) {
+            if (confirm('¿Estás seguro de eliminar permanentemente este turno?')) {
+                appointments = appointments.filter(app => app.id !== id);
+                saveAppointments();
+                updateAvailableSlots();
+            }
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-date').value = '';
+            document.getElementById('filter-doctor').value = '';
+            document.getElementById('filter-status').value = '';
+            renderAppointmentsTable();
+        }
+
+        function exportToCSV() {
+            if (appointments.length === 0) {
+                alert('No hay turnos para exportar.');
+                return;
+            }
+            let csvContent = "data:text/csv;charset=utf-8,ID,Fecha,Hora,Paciente,DNI,Telefono,Medico,Estado\n";
+            appointments.forEach(app => {
+                csvContent += `${app.id},${app.date},${app.time},"${app.name}",${app.dni},${app.phone},"${app.doctor}",${app.status}\n`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `turnos_medicos_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function openDoctorModal() {
+            document.getElementById('doctor-modal').classList.remove('hidden');
+            document.getElementById('doctor-modal').classList.add('flex');
+            renderDoctorsModalList();
+        }
+
+        function closeDoctorModal() {
+            document.getElementById('doctor-modal').classList.add('hidden');
+            document.getElementById('doctor-modal').classList.remove('flex');
+            updateDoctorSelects();
+        }
+
+        function renderDoctorsModalList() {
+            const list = document.getElementById('doctors-list-modal');
+            list.innerHTML = '';
+            doctors.forEach(doc => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center bg-dark-bg p-2.5 rounded-xl border border-dark-border text-xs";
+                div.innerHTML = `
+                    <span><strong>${doc.name}</strong> - <span class="text-dark-muted">${doc.specialty}</span></span>
+                    <button onclick="deleteDoctor(${doc.id})" class="text-rose-400 hover:text-rose-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                `;
+                list.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function handleAddDoctor(event) {
+            event.preventDefault();
+            const name = document.getElementById('new-doc-name').value;
+            const specialty = document.getElementById('new-doc-spec').value;
+
+            doctors.push({ id: Date.now(), name, specialty });
+            localStorage.setItem('mediturnos_doctors', JSON.stringify(doctors));
+            
+            document.getElementById('new-doc-name').value = '';
+            document.getElementById('new-doc-spec').value = '';
+            renderDoctorsModalList();
+        }
+
+        function deleteDoctor(id) {
+            if (doctors.length <= 1) {
+                alert('Debe haber al menos un médico registrado.');
+                return;
+            }
+            if (confirm('¿Eliminar este médico?')) {
+                doctors = doctors.filter(doc => doc.id !== id);
+                localStorage.setItem('mediturnos_doctors', JSON.stringify(doctors));
+                renderDoctorsModalList();
+            }
+        }
+    </script>
+</body>
+</html>
